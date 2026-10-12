@@ -5,10 +5,12 @@ import { hexToHsv, hsvToHex } from './color';
 const isHex = (value: string) => /^[0-9a-f]{6}$/i.test(value);
 
 
-export function ColorPicker({ color, onChange }: { color: string; onChange: (color: string) => void }) {
+export function ColorPicker({ color, onChange, disabled = false }: { color: string; onChange: (color: string) => void; disabled?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const [draft, setDraft] = useState(color);
+  const [draft, setDraftState] = useState(color);
+  const latestDraft = useRef(color);
+  function setDraft(next: string) { latestDraft.current = next; setDraftState(next); }
   const [hue, setHue] = useState(0);
   const valid = isHex(draft);
   const displayed = valid ? draft : 'dce6ff';
@@ -27,10 +29,11 @@ export function ColorPicker({ color, onChange }: { color: string; onChange: (col
   }
 
   return <>
-    <button id="color" ref={trigger} className="color-trigger" aria-label="Escolher cor personalizada" aria-haspopup="dialog" onClick={open}>
+    <button id="color" ref={trigger} className="color-trigger" aria-label="Escolher cor personalizada" aria-haspopup="dialog" disabled={disabled} onClick={open}>
       <span style={{ background: `#${isHex(color) ? color : 'dce6ff'}` }} />
     </button>
     <dialog ref={dialog} className="preview-dialog color-dialog" aria-labelledby="custom-color-title"
+      onContextMenu={event => event.preventDefault()}
       onClose={() => trigger.current?.focus()}
       onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }}>
       <div className="dialog-header">
@@ -40,7 +43,9 @@ export function ColorPicker({ color, onChange }: { color: string; onChange: (col
       <div className="color-sample" style={{ background: `#${displayed}` }} aria-label={`Cor escolhida: #${displayed}`} />
       <div className="color-plane" tabIndex={0} role="group" aria-label="Saturação e luminosidade: use as setas para ajustar" autoFocus
         style={{backgroundColor:`hsl(${hue} 100% 50%)`}}
-        onPointerDown={event=>{event.currentTarget.setPointerCapture(event.pointerId);pick(event);}}
+        onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);pick(event);}}
+        onPointerUp={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId)){pick(event);event.currentTarget.releasePointerCapture(event.pointerId);}}}
+        onPointerCancel={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);}}
         onPointerMove={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))pick(event);}}
         onKeyDown={event=>{
           const steps: Record<string,[number,number]>={ArrowLeft:[-.02,0],ArrowRight:[.02,0],ArrowUp:[0,.02],ArrowDown:[0,-.02]};
@@ -59,7 +64,7 @@ export function ColorPicker({ color, onChange }: { color: string; onChange: (col
       <p className="hint">Escolha a cor aqui e aplique no teclado pelo painel.</p>
       <div className="color-actions">
         <button onClick={() => dialog.current?.close()}>Cancelar</button>
-        <button className="primary" disabled={!valid} onClick={() => { onChange(draft.toLowerCase()); dialog.current?.close(); }}>Usar cor</button>
+        <button className="primary" disabled={!valid} onClick={() => { const selected=latestDraft.current;if(!isHex(selected))return;onChange(selected.toLowerCase()); dialog.current?.close(); }}>Usar cor</button>
       </div>
     </dialog>
   </>;

@@ -45,14 +45,14 @@ GDK_BACKEND=x11 WEBKIT_DISABLE_DMABUF_RENDERER=1 ./src-tauri/target/debug/tuf-pu
 
 For an optimized build, omit `--debug` and run `src-tauri/target/release/tuf-pulse`.
 
-A janela inicial é compacta (400 × 360), com mínimo de 320 × 320. O fluxo principal é perfis salvos → cor e brilho → Prévia / Aplicar. O teclado aparece somente no modal de Prévia (fecha por Escape ou pelo botão ×); a edição abre pelo lápis ao lado de Perfis salvos e o diagnóstico abre sob demanda. Presets de cor aparecem como bolinhas; um slider de arraste seleciona os quatro níveis de brilho. Mensagens de sucesso são substituídas por um ✓ discreto, enquanto erros permanecem visíveis. A altura do painel se ajusta ao conteúdo, limitada ao monitor. Edição fica em modal; mais de seis perfis usam páginas para preservar os controles principais sem rolagem. Nesta instalação há uma regra específica para abrir o TUF Pulse flutuante e centralizado, sem dividir o espaço das outras janelas.
+A janela inicial é compacta (400 × 360), com mínimo de 320 × 320. O fluxo principal é perfis salvos → cor e brilho → Prévia / Aplicar. O teclado aparece somente no modal de Prévia (fecha por Escape ou pelo botão ×); a edição abre pelo lápis ao lado de Perfis salvos e o diagnóstico abre em modal ao clicar no título TUF PULSE. O botão Salvar, ao lado de Aplicar, abre a criação de perfil com a cor e brilho escolhidos; o lápis permite somente editar ou excluir perfis existentes. Presets de cor aparecem como bolinhas; um slider de arraste seleciona os quatro níveis de brilho. Mensagens de sucesso são substituídas por um ✓ discreto, enquanto erros permanecem visíveis. A altura do painel se ajusta ao conteúdo, limitada ao monitor. Edição fica em modal; mais de seis perfis usam páginas para preservar os controles principais sem rolagem. Nesta instalação há uma regra específica para abrir o TUF Pulse flutuante e centralizado, sem dividir o espaço das outras janelas.
 
 ## Use / Em português
 
 1. Confira o modelo, as capacidades e a conexão no painel; Atualizar diagnóstico lê novamente o dispositivo.
 2. Escolha uma cor hexadecimal de seis caracteres e um brilho anunciado. Essas escolhas alteram apenas a prévia.
 3. Clique **Aplicar no teclado** para enviar cor fixa e brilho. As operações são sequenciais, sem transação: uma falha no brilho após sucesso da cor aparece como aplicação parcial.
-4. Informe um nome e use **Salvar novo**. Para alterar o nome/cor/brilho de um perfil, selecione-o e use **Atualizar selecionado**. No editor, escolha **Nome** ou um ícone (trabalho, programação, controle ou incógnito). O nome fica no tooltip e na identificação acessível. Clique no lápis ao lado de **Perfis salvos** para salvar, atualizar ou excluir o perfil selecionado.
+4. Clique em **Salvar**, ao lado de **Aplicar**, para abrir o modal de criação com a cor e brilho atuais. Informe o nome e escolha **Nome** ou um ícone. O lápis ao lado de **Perfis salvos** abre somente edição e exclusão dos perfis existentes; selecione um perfil e use **Salvar alterações** ou **Excluir perfil**. Salvar e editar não aplicam iluminação ao hardware.
 5. Clicar em um perfil salvo aplica imediatamente sua cor e brilho. Alterar manualmente a cor ou o brilho exige **Aplicar no teclado**. Reabrir restaura a seleção salva, sem modificar o teclado automaticamente.
 
 Profiles are versioned JSON at `$XDG_CONFIG_HOME/tuf-pulse/profiles.json`, falling back to `~/.config/tuf-pulse/profiles.json`. Writes use a temporary file in the same directory, fsync and atomic rename. Invalid or future-version files are preserved; the UI reports the error and disables profile writes. Inspect/back up that file before repairing it manually. Use one application instance at a time; cross-process profile coordination and the shortcuts CLI are not implemented.
@@ -61,9 +61,9 @@ A successful static-color command means asusctl accepted the color, not that the
 
 ## Quick access on this Omarchy installation
 
-**Super+Shift+K** opens or focuses TUF Pulse. **Escape** closes the panel (when no operation is running); inside a modal it closes only that modal. The header × button also closes the panel. Applying a profile keeps the window open so success or errors remain visible.
+**Super+Shift+K** opens or focuses TUF Pulse. Zoom shortcuts and Ctrl+wheel are blocked; the panel uses a fixed viewport scale. **Escape** closes the panel (when no operation is running); inside a modal it closes only that modal. The header × button also closes the panel. Applying a profile keeps the window open so success or errors remain visible.
 
-The user configuration `~/.config/hypr/tuf-pulse.lua` uses the matching window class, floats/centers it at 400 × 360 and binds the shortcut through Omarchy's launch-or-focus helper. The main Hyprland config was backed up before adding `require("hypr.tuf-pulse")`; reload and configerrors validation passed. The source snippet is in `integrations/hyprland.lua`. `scripts/launch.sh` starts the built debug executable with the local WebKit workaround. Rebuild after code changes; update the launcher path if moving the repository. These Lua instructions target the locally installed Hyprland 0.56.2.
+The user configuration `~/.config/hypr/tuf-pulse.lua` uses the matching window class, floats/centers it at 400 × 360 and binds the shortcut through Omarchy's launch-or-focus helper. The main Hyprland config was backed up before adding `require("hypr.tuf-pulse")`; reload and configerrors validation passed. The source snippet is in `integrations/hyprland.lua`. `scripts/launch.sh` starts the built release executable with the local WebKit workaround. Rebuild after code changes; update the launcher path if moving the repository. These Lua instructions target the locally installed Hyprland 0.56.2.
 
 The custom color modal has a hue strip and a draggable saturation/value plane; arrow keys also adjust the plane. Hex entry remains available. **Usar cor** changes the panel selection; **Aplicar** sends manual changes to the keyboard.
 
@@ -93,3 +93,15 @@ On FA607NUQ with asusctl 6.4.0 and active asusd, the native application smoke te
 See [validation notes](docs/06-validation.md), [hardware evidence](docs/02-hardware.md), [scope](docs/01-mvp.md) and [architecture](docs/03-architecture.md). No commits or pushes were created by this implementation.
 
 Independent MIT project. ASUS/TUF identify compatible hardware and imply no affiliation or endorsement.
+
+## Local startup baseline
+
+Debug and release startup, process-tree PSS/CPU and shutdown were measured on this installation; see [results and limitations](docs/07-performance-review.md#baseline-local-medida--12102026). The launcher uses release for daily use. Rebuild it with `npm run tauri build -- --no-bundle` after changes. The app closes its window and exits; it does not intentionally stay hidden/resident. WebKit may retain files in its local data directory after exit.
+
+To repeat (opens and closes only its own windows; reads diagnosis, never applies lighting):
+
+```bash
+python3 scripts/measure-startup.py --build release --runs 3 --output /tmp/tuf-pulse-release.json
+```
+
+Build first, close other TUF Pulse instances, and avoid compiling while measuring. The script requires this Hyprland Lua API and access to host /proc and the graphical session. Startup markers log to stderr only with `TUF_PULSE_MEASURE` set.

@@ -1,7 +1,7 @@
 use crate::adapter::{validate_brightness, validate_color};
 use serde::{Deserialize, Serialize};
 use std::{
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
 };
 
@@ -80,11 +80,16 @@ pub fn validate(file: &ProfileFile) -> Result<(), String> {
     Ok(())
 }
 pub fn load(path: &Path) -> Result<ProfileFile, String> {
-    let bytes = match std::fs::read(path) {
-        Ok(b) => b,
+    let input = match std::fs::File::open(path) {
+        Ok(f) => f,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(ProfileFile::default()),
         Err(e) => return Err(format!("Não foi possível ler {}: {e}", path.display())),
     };
+    let mut bytes = Vec::new();
+    input
+        .take(65537)
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("Não foi possível ler {}: {e}", path.display()))?;
     if bytes.len() > 65536 {
         return Err("Arquivo de perfis excede 64 KiB; preservado.".into());
     }
@@ -200,6 +205,29 @@ mod tests {
             load(&path).unwrap().profiles[0].icon.as_deref(),
             Some("incognito")
         );
+    }
+    #[test]
+    fn oversized_and_hostile_files_are_preserved() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("profiles.json");
+        for bytes in [
+            vec![b' '; 100_000],
+            br#"{"schemaVersion":1,"profiles":[],"lastSelectedProfileId":null,"unexpected":true}"#
+                .to_vec(),
+        ] {
+            std::fs::write(&p, &bytes).unwrap();
+            assert!(load(&p).is_err());
+            assert!(save(&p, &sample()).is_err());
+            assert_eq!(std::fs::read(&p).unwrap(), bytes);
+        }
+        for value in ["$(touch /tmp/injected)", "ffffff;", "\0", "💡"] {
+            let mut f = sample();
+            f.profiles[0].color = value.into();
+            assert!(validate(&f).is_err());
+            f = sample();
+            f.profiles[0].brightness = value.into();
+            assert!(validate(&f).is_err());
+        }
     }
     #[test]
     fn failed_write_keeps_existing_data() {

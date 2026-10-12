@@ -1,7 +1,24 @@
 mod adapter;
 mod application;
 mod profiles;
+use std::time::Instant;
 use tokio::sync::Mutex;
+
+struct StartupMetrics {
+    started: Instant,
+    enabled: bool,
+}
+
+#[tauri::command]
+fn startup_marker(phase: String, metrics: tauri::State<'_, StartupMetrics>) {
+    if metrics.enabled && matches!(phase.as_str(), "rendered" | "ready") {
+        eprintln!(
+            "TUF_PULSE_METRIC {} {}",
+            phase,
+            metrics.started.elapsed().as_secs_f64() * 1000.0
+        );
+    }
+}
 
 #[tauri::command]
 async fn diagnose(lock: tauri::State<'_, Mutex<()>>) -> Result<adapter::Capabilities, String> {
@@ -70,7 +87,12 @@ fn close_window(window: tauri::Window) -> Result<(), String> {
     window.close().map_err(|e| e.to_string())
 }
 fn main() {
+    let metrics = StartupMetrics {
+        started: Instant::now(),
+        enabled: std::env::var_os("TUF_PULSE_MEASURE").is_some(),
+    };
     tauri::Builder::default()
+        .manage(metrics)
         .manage(Mutex::new(()))
         .invoke_handler(tauri::generate_handler![
             diagnose,
@@ -79,7 +101,8 @@ fn main() {
             load_profiles,
             save_profiles,
             close_window,
-            fit_window
+            fit_window,
+            startup_marker
         ])
         .run(tauri::generate_context!())
         .expect("Falha ao iniciar TUF Pulse");

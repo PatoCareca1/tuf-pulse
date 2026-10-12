@@ -1,0 +1,138 @@
+{
+  "binary_bytes": 11778832,
+  "asusctl_read_ms": {
+    "info --show-supported": [
+      82.82366200000979,
+      78.4016329998849,
+      76.6514159995495,
+      76.76989799983858,
+      75.62800000050629
+    ],
+    "leds get": [
+      74.71654299934016,
+      76.1572609999348,
+      80.95787799993559,
+      79.56162400023459,
+      74.55805700010387
+    ]
+  },
+  "results": [
+    {
+      "build": "release",
+      "run": 1,
+      "pid": 28121,
+      "mapped_observed_ms": 835.7133160006924,
+      "from_rust_main_ms": {
+        "rendered": 907.787733,
+        "ready": 1068.877494
+      },
+      "ready_pss_mib": 250.0654296875,
+      "cpu_seconds_at_ready": 0.76,
+      "idle_pss_mib": 247.1904296875,
+      "idle_rss_sum_mib": 476.92578125,
+      "idle_cpu_percent_one_core": 0.0,
+      "startup_cpu_seconds_at_idle": 0.78,
+      "memory_processes": [
+        {
+          "pid": 28121,
+          "name": "tuf-pulse",
+          "Rss": 167028,
+          "Pss": 74101
+        },
+        {
+          "pid": 28138,
+          "name": "WebKitNetworkPr",
+          "Rss": 101060,
+          "Pss": 44340
+        },
+        {
+          "pid": 28141,
+          "name": "WebKitWebProces",
+          "Rss": 220284,
+          "Pss": 134682
+        }
+      ],
+      "close_parent_ms": 40.356556000006094,
+      "survivor_pids_after_2s": []
+    },
+    {
+      "build": "release",
+      "run": 2,
+      "pid": 28230,
+      "mapped_observed_ms": 848.3137820003321,
+      "from_rust_main_ms": {
+        "rendered": 889.6059290000001,
+        "ready": 1055.8878220000001
+      },
+      "ready_pss_mib": 250.2861328125,
+      "cpu_seconds_at_ready": 0.75,
+      "idle_pss_mib": 247.3212890625,
+      "idle_rss_sum_mib": 477.59765625,
+      "idle_cpu_percent_one_core": 0.19915114270995324,
+      "startup_cpu_seconds_at_idle": 0.77,
+      "memory_processes": [
+        {
+          "pid": 28244,
+          "name": "WebKitNetworkPr",
+          "Rss": 101204,
+          "Pss": 44294
+        },
+        {
+          "pid": 28230,
+          "name": "tuf-pulse",
+          "Rss": 167476,
+          "Pss": 74311
+        },
+        {
+          "pid": 28247,
+          "name": "WebKitWebProces",
+          "Rss": 220380,
+          "Pss": 134652
+        }
+      ],
+      "close_parent_ms": 41.333273999953235,
+      "survivor_pids_after_2s": []
+    },
+    {
+      "build": "release",
+      "run": 3,
+      "pid": 28347,
+      "mapped_observed_ms": 430.1335569998628,
+      "from_rust_main_ms": {
+        "rendered": 404.211687,
+        "ready": 564.825288
+      },
+      "ready_pss_mib": 250.0400390625,
+      "cpu_seconds_at_ready": 0.73,
+      "idle_pss_mib": 247.091796875,
+      "idle_rss_sum_mib": 477.26171875,
+      "idle_cpu_percent_one_core": 0.19917025353702275,
+      "startup_cpu_seconds_at_idle": 0.74,
+      "memory_processes": [
+        {
+          "pid": 28360,
+          "name": "WebKitNetworkPr",
+          "Rss": 101308,
+          "Pss": 44422
+        },
+        {
+          "pid": 28347,
+          "name": "tuf-pulse",
+          "Rss": 167276,
+          "Pss": 74127
+        },
+        {
+          "pid": 28364,
+          "name": "WebKitWebProces",
+          "Rss": 220132,
+          "Pss": 134473
+        }
+      ],
+      "close_parent_ms": 40.68263699991803,
+      "survivor_pids_after_2s": []
+    }
+  ],
+  "date": "2026-10-12",
+  "binary_sha256": "8ecb79f848b2afec8973a8e56ad671af9e0470aec967a66e9bf2fbb3f56bd8e4",
+  "method": "Three sequential launches with existing OS/WebKit caches, process-local X11 workaround. PSS/RSS of Rust and live descendants. Five-second idle samples. Ready/rendered markers start at Rust main and follow two requestAnimationFrame callbacks; not an optical paint measurement. Window mapping sampled through hyprctl. Close via targeted compositor request, same native window-close event; tracked survivors checked after two seconds. No lighting writes."
+}

@@ -20,11 +20,16 @@ function App() {
  const [profileName,setProfileName] = useState(''); const [profileError,setProfileError] = useState('');
  const editorDialog = useRef<HTMLDialogElement>(null);
  const editorTrigger = useRef<HTMLButtonElement>(null);
+ const saveTrigger = useRef<HTMLButtonElement>(null);
+ const diagnosticTrigger = useRef<HTMLButtonElement>(null);
+ const diagnosticDialog = useRef<HTMLDialogElement>(null);
+ const [editorMode,setEditorMode] = useState<'create' | 'edit'>('edit');
  const panel = useRef<HTMLElement>(null);
  const [editingProfileId,setEditingProfileId] = useState<string | null>(null);
  const [profileIcon,setProfileIcon] = useState<ProfileIconName | null>(null);
  const [profilePage,setProfilePage] = useState(0);
  const [profileReady,setProfileReady] = useState(false);
+ const startupReadyReported = useRef(false);
  const persistProfiles = async (file: ProfileFile) => {
   setBusy(true);
   try {await invoke('save_profiles',{file});setProfiles(file);setProfileError('');return true;}
@@ -45,11 +50,13 @@ function App() {
  const saveProfile = async (existing: boolean) => {
   const id=existing ? editingProfileId : crypto.randomUUID();
   if(!id)return;
-  if(await persistProfiles(upsertProfile(profiles,{id,name:profileName.trim(),color,brightness,effect:'static',icon:profileIcon}))) setEditingProfileId(id);
+  if(await persistProfiles(upsertProfile(profiles,{id,name:profileName.trim(),color,brightness,effect:'static',icon:profileIcon}))) {setEditingProfileId(id);editorDialog.current?.close();}
  };
  const openEditor = () => {
-  const p=profiles.profiles.find(p=>p.id===profiles.lastSelectedProfileId);
+  setEditorMode('edit');
+  const p=profiles.profiles.find(p=>p.id===profiles.lastSelectedProfileId) ?? profiles.profiles[0];
   setEditingProfileId(p?.id ?? null);setProfileName(p?.name ?? '');setProfileIcon(p?.icon ?? null);
+  if(p){setColor(p.color);setBrightness(p.brightness);}
   editorDialog.current?.showModal();
  };
  useEffect(()=>{
@@ -59,6 +66,10 @@ function App() {
   if(panel.current) observer.observe(panel.current);
   return ()=>observer.disconnect();
  },[]);
+ const openSave = () => {
+  setEditorMode('create');setEditingProfileId(null);setProfileName('');setProfileIcon(null);
+  editorDialog.current?.showModal();
+ };
  const valid = /^[\da-f]{6}$/i.test(color);
  const refresh = async () => {
   setBusy(true); setConfirmed({color:null,brightness:null,effect:null});
@@ -66,6 +77,27 @@ function App() {
   catch(e) { setMessage(String(e)); setCaps(null); } finally {setBusy(false);}
  };
  useEffect(()=>{void refresh();},[]);
+ // Reports are opt-in in Rust; no persistent logs or polling in normal use.
+ useEffect(()=>{
+  const frame=requestAnimationFrame(()=>requestAnimationFrame(()=>{void invoke('startup_marker',{phase:'rendered'}).catch(()=>{});}));
+  return ()=>cancelAnimationFrame(frame);
+ },[]);
+ useEffect(()=>{
+  if(caps && profileReady && !busy && !startupReadyReported.current) {
+   const frame=requestAnimationFrame(()=>requestAnimationFrame(()=>{startupReadyReported.current=true;void invoke('startup_marker',{phase:'ready'}).catch(()=>{});}));
+   return ()=>cancelAnimationFrame(frame);
+  }
+ },[caps,profileReady,busy]);
+ useEffect(()=>{
+  const blockKey=(event: KeyboardEvent)=>{if((event.ctrlKey || event.metaKey) && ['+','=','-','_','0'].includes(event.key))event.preventDefault();};
+  const blockWheel=(event: WheelEvent)=>{if(event.ctrlKey || event.metaKey)event.preventDefault();};
+  const blockGesture=(event: Event)=>event.preventDefault();
+  document.addEventListener('keydown',blockKey,true);
+  document.addEventListener('wheel',blockWheel,{passive:false,capture:true});
+  document.addEventListener('gesturestart',blockGesture,{passive:false});
+  document.addEventListener('gesturechange',blockGesture,{passive:false});
+  return ()=>{document.removeEventListener('keydown',blockKey,true);document.removeEventListener('wheel',blockWheel,true);document.removeEventListener('gesturestart',blockGesture);document.removeEventListener('gesturechange',blockGesture);};
+ },[]);
  const apply = async (requestedColor = color, requestedBrightness = brightness) => {
   setBusy(true); setRequested(`#${requestedColor.toUpperCase()} · ${labels[requestedBrightness]}`); setMessage('');
   try {const r = await invoke<ApplyResult & {message:string}>('apply_lighting',{color:requestedColor,brightness:requestedBrightness}); setConfirmed(r.confirmedState); setMessage(r.status === 'applied' ? '' : `${r.status === 'partial' ? 'Aplicação parcial' : 'Falha'}: ${r.message}`);}
@@ -86,14 +118,14 @@ function App() {
  const ready = caps?.connection === 'ready' && caps.effects.static === 'confirmed';
  return <main ref={panel} className="quick-panel">
   <header className="app-header">
-   <h1><span aria-hidden="true">ϟ</span> TUF Pulse</h1>
+   <h1><button ref={diagnosticTrigger} className="brand" aria-label="TUF Pulse — dispositivo e estado" aria-haspopup="dialog" title="Dispositivo e estado" onClick={()=>diagnosticDialog.current?.showModal()}><span className="brand-symbol" aria-hidden="true">ϟ</span><span className="brand-tuf">TUF</span><span className="brand-pulse">PULSE</span></button></h1>
    <div className="header-actions">{confirmed.color === color.toLowerCase() && confirmed.brightness === brightness && !busy && !message && <span className="success-mark" role="status" aria-label="Comando concluído" title="Comando concluído">✓</span>}<button className="close-app" disabled={busy} aria-label="Fechar aplicativo (Escape)" title="Fechar (Esc)" onClick={close}>×</button></div>
   </header>
 
 
 
   <section className="profiles" aria-label="Perfis locais">
-   <div className="profile-heading"><h2>Perfis salvos</h2><button ref={editorTrigger} className="edit-profiles" aria-label="Editar perfis" title="Editar perfis" aria-haspopup="dialog" onClick={openEditor}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z"/><path d="m13 6 5 5"/></svg></button></div>
+   <div className="profile-heading"><h2>Perfis salvos</h2><button ref={editorTrigger} className="edit-profiles" aria-label="Editar perfis" title="Editar perfis" aria-haspopup="dialog" disabled={busy || !profiles.profiles.length} onClick={openEditor}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z"/><path d="m13 6 5 5"/></svg></button></div>
    <div className="saved">{profiles.profiles.length ? profiles.profiles.slice(Math.min(profilePage, Math.max(0,Math.ceil(profiles.profiles.length/6)-1))*6, (Math.min(profilePage, Math.max(0,Math.ceil(profiles.profiles.length/6)-1))+1)*6).map(p=><button key={p.id} className={p.icon ? 'icon-profile' : 'named-profile'} aria-label={p.name} disabled={busy} aria-pressed={profiles.lastSelectedProfileId===p.id} onClick={()=>void chooseProfile(p)} title={`${p.name} · #${p.color.toUpperCase()} · ${labels[p.brightness]}`}><span className="profile-dot" style={{background:`#${p.color}`}}/>{p.icon ? <ProfileIcon icon={p.icon}/> : p.name}</button>) : <p className="empty">Nenhum perfil salvo</p>}</div>
    {message && <p className="error" role="alert">{message}</p>}
    {profiles.profiles.length>6 && <div className="profile-pages"><button aria-label="Perfis anteriores" disabled={profilePage===0} onClick={()=>setProfilePage(Math.max(0,profilePage-1))}>‹</button><button aria-label="Próximos perfis" disabled={(profilePage+1)*6>=profiles.profiles.length} onClick={()=>setProfilePage(profilePage+1)}>›</button></div>}
@@ -102,8 +134,8 @@ function App() {
   </section>
 
   <section className="controls" aria-label="Iluminação">
-   <div className="color-row"><label htmlFor="color">Cores:</label><ColorPicker color={color} onChange={setColor}/>
-    <div className="presets" aria-label="Cores favoritas">{presets.map(([name,c])=><button key={name} aria-label={name} title={name} aria-pressed={color.toLowerCase()===c} onClick={()=>setColor(c)}><span className="swatch" style={{background:`#${c}`}}/></button>)}</div>
+   <div className="color-row"><label htmlFor="color">Cores:</label><ColorPicker color={color} onChange={setColor} disabled={busy}/>
+    <div className="presets" aria-label="Cores favoritas">{presets.map(([name,c])=><button key={name} aria-label={name} title={name} aria-pressed={color.toLowerCase()===c} disabled={busy} onClick={()=>setColor(c)}><span className="swatch" style={{background:`#${c}`}}/></button>)}</div>
    </div>
    <div className="brightness-row"><label htmlFor="brightness-slider">Brilho:</label>
     <div className="brightness-slider"><input id="brightness-slider" type="range" min={0} max={3} step={1} value={levels.indexOf(brightness)} aria-valuetext={labels[brightness]} disabled={busy || !caps?.brightness.length} onChange={e=>{const level=levels[Number(e.target.value)];if(caps?.brightness.includes(level))setBrightness(level);}}/>
@@ -114,26 +146,29 @@ function App() {
 
 
 
-  <div className="apply-area"><div className="actions"><button ref={previewTrigger} className="preview-button" disabled={!valid} onClick={()=>previewDialog.current?.showModal()}>Prévia</button><button className="primary" disabled={busy || !valid || !ready || !caps?.brightness.includes(brightness)} onClick={()=>void apply()}>{busy ? 'Aguarde…' : 'Aplicar'}</button></div></div>
+  <div className="apply-area"><div className="actions"><button ref={previewTrigger} className="preview-button" disabled={!valid} onClick={()=>previewDialog.current?.showModal()}>Prévia</button><button className="primary" disabled={busy || !valid || !ready || !caps?.brightness.includes(brightness)} onClick={()=>void apply()}>{busy ? 'Aguarde…' : 'Aplicar'}</button><button ref={saveTrigger} disabled={busy || !profileReady || !valid || profiles.profiles.length>=20} onClick={openSave}>Salvar</button></div></div>
 
-  <details className="diagnostic"><summary>Dispositivo e estado</summary><div className="diagnostic-body">
+  <dialog ref={diagnosticDialog} className="preview-dialog" aria-labelledby="diagnostic-title" onClose={()=>diagnosticTrigger.current?.focus()} onClick={e=>{if(e.target===e.currentTarget)diagnosticDialog.current?.close();}}>
+   <div className="dialog-header"><h2 id="diagnostic-title">Dispositivo e estado</h2><button autoFocus aria-label="Fechar diagnóstico" onClick={()=>diagnosticDialog.current?.close()}>×</button></div><div className="diagnostic-body">
    <p>{caps?.model ?? 'Modelo desconhecido'} · asusctl {caps?.adapterVersion ?? '—'}</p>
    <p>{caps?.message}</p><p>Brilho anunciado: {caps?.brightness.map(b=>labels[b]).join(', ') || 'desconhecido'}. Zonas independentes: {caps?.independentZoneCount ?? 'desconhecidas'}.</p>
    <p>Solicitado: {requested ?? 'nenhuma aplicação nesta sessão'}<br/>Cor aceita pelo comando: {confirmed.color ? `#${confirmed.color.toUpperCase()}` : 'desconhecida'}<br/>Brilho lido: {confirmed.brightness ? labels[confirmed.brightness] : 'desconhecido'}</p>
    <p>A prévia é ilustrativa. A cor não possui leitura de confirmação; confira os LEDs. Efeitos extras não estão habilitados.</p>
    <button disabled={busy} onClick={()=>void refresh()}>Atualizar diagnóstico</button>
-  </div></details>
-  <dialog ref={editorDialog} className="preview-dialog editor-dialog" aria-labelledby="editor-title" onClose={()=>editorTrigger.current?.focus()} onClick={e=>{if(e.target===e.currentTarget)editorDialog.current?.close();}}>
-   <div className="dialog-header"><h2 id="editor-title">Editar perfis</h2><button autoFocus aria-label="Fechar edição" onClick={()=>editorDialog.current?.close()}>×</button></div>
-<select aria-label="Perfil para editar" value={editingProfileId ?? ''} onChange={e=>{
-     const p=profiles.profiles.find(p=>p.id===e.target.value);setEditingProfileId(p?.id ?? null);setProfileName(p?.name ?? '');setProfileIcon(p?.icon ?? null);if(p){setColor(p.color);setBrightness(p.brightness);}
-    }}><option value="">Novo perfil</option>{profiles.profiles.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
+  </div></dialog>
+  <dialog ref={editorDialog} className="preview-dialog editor-dialog" aria-labelledby="editor-title" onClose={()=>(editorMode==='create' ? saveTrigger : editorTrigger).current?.focus()} onClick={e=>{if(e.target===e.currentTarget)editorDialog.current?.close();}}>
+   <div className="dialog-header"><h2 id="editor-title">{editorMode==='create' ? 'Salvar perfil' : 'Editar perfis'}</h2><button autoFocus aria-label="Fechar edição" onClick={()=>editorDialog.current?.close()}>×</button></div>
+   {editorMode==='edit' && <div className="editor-profiles" role="group" aria-label="Perfil para editar">
+    {profiles.profiles.map(p=><button key={p.id} disabled={busy} aria-pressed={editingProfileId===p.id} onClick={()=>{
+     setEditingProfileId(p.id);setProfileName(p.name);setProfileIcon(p.icon ?? null);setColor(p.color);setBrightness(p.brightness);
+    }}><span className="profile-dot" style={{background:`#${p.color}`}}/>{p.icon && <ProfileIcon icon={p.icon}/>}<span>{p.name}</span></button>)}
+   </div>}
+    <p className="profile-values"><span style={{background:`#${color}`}}/>#{color.toUpperCase()} · {labels[brightness]}</p>
     <div className="icon-options" role="group" aria-label="Aparência do perfil"><button aria-pressed={!profileIcon} onClick={()=>setProfileIcon(null)}>Nome</button>{profileIcons.map(i=><button key={i.id} aria-label={i.label} title={i.label} aria-pressed={profileIcon===i.id} onClick={()=>setProfileIcon(i.id)}><ProfileIcon icon={i.id}/></button>)}</div>
-    <form className="save" onSubmit={e=>{e.preventDefault();void saveProfile(false);}}>
+    <form className="save" onSubmit={e=>{e.preventDefault();void saveProfile(editorMode==='edit');}}>
     <input aria-label="Nome do perfil" placeholder="Nome do perfil" maxLength={32} value={profileName} onChange={e=>setProfileName(e.target.value)} required/>
-    <button disabled={busy || !profileReady || !valid || !profileName.trim() || profiles.profiles.length>=20}>Salvar novo</button>
-    <button type="button" disabled={busy || !profileReady || !valid || !profileName.trim() || !editingProfileId} onClick={()=>void saveProfile(true)}>Atualizar selecionado</button>
-    <button className="delete" type="button" disabled={busy || !editingProfileId} onClick={()=>editingProfileId && void persistProfiles(removeProfile(profiles,editingProfileId)).then(ok=>{if(ok){setEditingProfileId(null);setProfileName('');setProfileIcon(null);}})}>Excluir selecionado</button>
+    <button className="primary" disabled={busy || !profileReady || !valid || !profileName.trim() || (editorMode==='edit' ? !editingProfileId : profiles.profiles.length>=20)}>{busy ? 'Salvando…' : editorMode==='create' ? 'Salvar perfil' : 'Salvar alterações'}</button>
+    {editorMode==='edit' && <button className="delete" type="button" disabled={busy || !editingProfileId} onClick={()=>editingProfileId && void persistProfiles(removeProfile(profiles,editingProfileId)).then(ok=>{if(ok){setEditingProfileId(null);setProfileName('');setProfileIcon(null);editorDialog.current?.close();}})}>Excluir perfil</button>}
    </form>
    {profileError && <p className="error" role="alert">{profileError}</p>}
   </dialog>

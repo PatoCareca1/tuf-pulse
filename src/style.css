@@ -139,8 +139,25 @@ summary:hover { color: #e4edf5; }
 .named-profile .profile-dot { display: inline-block; margin-right: 7px; }
 .profile-pages { display: flex; gap: 4px; margin-top: 6px; }
 .profile-pages button { min-height: 24px; width: 28px; padding: 0; font-size: 17px; }
-.editor-dialog select { width: 100%; padding: 8px; background: #121922; color: inherit; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }
+.editor-profiles { display: flex; flex-wrap: wrap; gap: 6px; max-height: 128px; overflow-y: auto; padding: 3px; margin: -3px -3px 12px; }
+.editor-profiles button { display: flex; align-items: center; gap: 7px; max-width: 100%; text-align: left; }
+.editor-profiles button > span:last-child { overflow-wrap: anywhere; }
+
 .icon-options { display: flex; gap: 6px; margin-bottom: 12px; }
 .icon-options button { display: grid; place-items: center; padding: 7px 10px; }
 .quick-panel { padding-block: 12px; }
 .controls { margin-top: 14px; }
+
+.actions { grid-template-columns: auto minmax(0,1fr) auto; }
+.brand { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 4px; background: transparent; padding: 0; min-height: 32px; }
+.brand:hover:not(:disabled) { background: transparent; }
+.brand span { margin: 0; }
+.brand .brand-symbol { color: #f6b64d; font-size: 30px; text-shadow: 0 0 16px #f6b64d55; }
+.brand .brand-tuf { font-family: 'ASUS ROG', 'ROG Fonts', 'Nimbus Sans Narrow', sans-serif; font-weight: 900; font-style: italic; font-size: 27px; letter-spacing: 1px; color: #f5e8ce; }
+.brand .brand-pulse { font-family: 'ASUS ROG', 'ROG Fonts', 'Nimbus Sans Narrow', sans-serif; font-weight: 800; font-size: 21px; letter-spacing: 2px; color: #f6b64d; text-shadow: 0 0 14px #f6b64d30; }
+.app-header { border-bottom: 1px solid #f6b64d25; padding-bottom: 10px; }
+.profile-values { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.profile-values span { width: 16px; height: 16px; border-radius: 4px; border: 1px solid #ffffff30; }
+.save .delete { grid-column: 1 / -1; }
+
+html { touch-action: pan-x pan-y; }

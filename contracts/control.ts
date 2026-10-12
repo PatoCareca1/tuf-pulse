@@ -1,9 +1,10 @@
-/** Design contract only. No hardware implementation is provided yet. */
+/** Shared desktop data contracts. Capabilities are advertised, not visual verification. */
 export type Brightness = "off" | "low" | "med" | "high";
 export type NativeEffect = "static" | "breathe" | "rainbow-cycle" | "pulse";
 export type Support = "confirmed" | "unverified" | "unsupported";
 
 export interface Capabilities {
+  message: string;
   model: string;
   adapterVersion: string;
   connection: "ready" | "missing-tool" | "daemon-unavailable" | "unknown";
@@ -13,7 +14,11 @@ export interface Capabilities {
   effects: Partial<Record<NativeEffect, Support>>;
 }
 
+export type ProfileIconName = "work" | "code" | "game" | "incognito";
+
 export interface Profile {
+  /** Omitted/null retains the name-only presentation of older files. */
+  icon?: ProfileIconName | null;
   id: string;
   name: string;
   /** Runtime validation must enforce exactly six hexadecimal digits. */
@@ -29,14 +34,14 @@ export interface ProfileFile {
 }
 
 export interface LightingState {
-  /** Null when state cannot be read reliably, e.g. after external changes. */
+  /** Last successful color command only; null on refresh, no reliable color readback. */
   color: string | null;
   brightness: Brightness | null;
   effect: NativeEffect | null;
 }
 
 export type ApplyResult =
-  | { status: "applied"; confirmedState: LightingState }
+  | { status: "applied"; confirmedState: LightingState; message: string }
   | { status: "partial" | "failed"; confirmedState: LightingState; message: string };
 
 export interface LightingAdapter {

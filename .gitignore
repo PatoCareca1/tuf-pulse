@@ -7,3 +7,6 @@ target/
 !*.example
 diagnostic-output*.txt
 .DS_Store
+src-tauri/target/
+src-tauri/gen/schemas/
+contexto.md

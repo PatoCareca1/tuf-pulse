@@ -1,0 +1,27 @@
+asusctl v6.4.0
+Software version: 6.4.0
+Product family: TUF Gaming A16
+Board name: FA607NUQ
+Supported Core Functions: [
+    "xyz.ljones.AsusArmoury",
+    "xyz.ljones.Aura",
+    "xyz.ljones.FanCurves",
+    "xyz.ljones.Platform",
+]
+Supported Platform Properties: [
+    ChargeControlEndThreshold,
+    ThrottlePolicy,
+]
+Supported Keyboard Brightness: [
+    Off,
+    Low,
+    Med,
+    High,
+]
+Supported Aura Modes: [
+    Static,
+]
+Supported Aura Zones: []
+Supported Aura Power Zones: [
+    Keyboard,
+]
